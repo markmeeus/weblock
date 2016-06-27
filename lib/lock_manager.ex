@@ -20,7 +20,7 @@ defmodule LockManager do
   
   def handle_call({:lock, name}, _from, {count, locks}) do        
     case Map.fetch(locks, name) do
-      {:ok, id} -> {:reply, :timeout, {count, locks}}      
+      {:ok, _id} -> {:reply, :timeout, {count, locks}}      
       :error ->
         new_lock_id = count + 1 
         {
@@ -31,7 +31,7 @@ defmodule LockManager do
     end        
   end
 
-  def handle_call({:unlock, name, lock_id}, _from, {last_id, locks}) do
+  def handle_call({:unlock, name, _lock_id}, _from, {last_id, locks}) do
     case Map.fetch(locks, name) do
       {:ok, _} -> {:reply, :unlocked, {last_id, Map.delete(locks, name)}}            
     end

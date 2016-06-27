@@ -19,7 +19,7 @@ defmodule LockManagerTest do
   end
 
   test "Cannot lock a resource twice", %{manager: manager} do
-    {:ok, lock_id} = LockManager.lock(manager, "resource")
+    {:ok, _lock_id} = LockManager.lock(manager, "resource")
     result = LockManager.lock(manager, "resource")    
     assert(
       result == :timeout  
