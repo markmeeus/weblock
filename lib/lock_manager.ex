@@ -6,12 +6,10 @@ defmodule LockManager do
   end
 
   def lock(manager, name, timeout \\ 0) do
-    {:ok, lock} = GenServer.call(manager, {:get_lock, name})
-    ResourceLock.enqueue(lock)
+    obtain_lock(manager, name, timeout)
     receive do
-      {:locked, lock_id } ->
-        {:ok, lock_id}
-      after timeout -> {:timeout}
+      {:ok, lock_id} -> {:ok, lock_id}
+      {:timeout} -> {:timeout}
     end
   end
 
@@ -25,15 +23,14 @@ defmodule LockManager do
   end
 
   def handle_call({:get_lock, name}, _from, locks) do
-    resource_lock = case Map.fetch(locks, name) do
-      {:ok, lock} -> lock
+    case Map.fetch(locks, name) do
+      {:ok, lock} ->
         {:reply, {:ok, lock}, locks}
       :error ->
         {:ok, lock} = ResourceLock.start_link
         {:reply, {:ok, lock}, Map.put(locks, name, lock)}
     end
   end
-
 
   def handle_call({:unlock, name, lock_id}, _from, locks) do
     case Map.fetch(locks, name) do
@@ -43,4 +40,18 @@ defmodule LockManager do
         {:reply, {:unknown_lock_id}, locks}
     end
   end
+
+  defp obtain_lock manager, name, timeout do
+    parent = self
+    spawn fn -> #obtain or timeout in other process
+      {:ok, lock} = GenServer.call(manager, {:get_lock, name})
+      ResourceLock.enqueue(lock) #sends locked message immediately if available
+      receive do
+        {:locked, lock_id } -> send parent, {:ok, lock_id}
+        after timeout       -> send parent, {:timeout}
+      end
+    end
+
+  end
+
 end

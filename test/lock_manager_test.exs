@@ -33,19 +33,19 @@ defmodule LockManagerTest do
       assert result == :unlocked
     end
 
-    test "returns :unkown_lock_id when unlocking a never locked resource", %{manager: manager} do
+    test "Returns :unkown_lock_id when unlocking a never locked resource", %{manager: manager} do
       {result} = LockManager.unlock(manager, "resource", "non-existing-id-lock_id")
       assert result == :unknown_lock_id
     end
 
-    test "returns :unkown_lock_id when unlocking a non-locked resource", %{manager: manager} do
+    test "Returns :unkown_lock_id when unlocking a non-locked resource", %{manager: manager} do
       {:ok, id} = LockManager.lock(manager, "resource")
       {:unlocked} = LockManager.unlock(manager, "resource", id)
       {result} = LockManager.unlock(manager, "resource", "non-existing-id-lock_id")
       assert result == :unknown_lock_id
     end
 
-    test "returns :unkown_lock_id when unlocking with wrong id", %{manager: manager} do
+    test "Returns :unkown_lock_id when unlocking with wrong id", %{manager: manager} do
       {:ok, _} = LockManager.lock(manager, "resource")
       {result} = LockManager.unlock(manager, "resource", "non-existing-id-lock_id")
       assert result == :unknown_lock_id
@@ -55,6 +55,62 @@ defmodule LockManagerTest do
       {:ok, lock_id} = LockManager.lock(manager, "resource")
       {:unlocked} = LockManager.unlock(manager, "resource", lock_id);
       {:ok, lock_id} = LockManager.lock(manager, "resource")
+      assert lock_id != nil
+    end
+  end
+
+  describe "Lock with timeout" do
+    test "locks a resource", %{manager: manager} do
+      {:ok, lock_id} = LockManager.lock(manager, "resource", 100)
+      assert lock_id != nil
+    end
+
+    test "Lock when current lock unlocks", %{manager: manager} do
+      {:ok, lock_id} = LockManager.lock(manager, "resource")
+
+      spawn fn->
+        Process.sleep(50)
+        {:unlocked} = LockManager.unlock(manager, "resource", lock_id)
+      end
+      #this one will wait untill previous one unlocks
+      {:ok, lock_id} = LockManager.lock(manager, "resource", 100)
+      assert lock_id != nil
+    end
+
+    test "Unlocks when last lock unlocks", %{manager: manager} do
+      {:ok, lock_id} = LockManager.lock(manager, "resource")
+      spawn fn->
+        Process.sleep(50)
+        {:unlocked} = LockManager.unlock(manager, "resource", lock_id)
+      end
+
+      #this one will wait untill previous one unlocks
+      {:ok, lock_id} = LockManager.lock(manager, "resource", 100)
+      spawn fn->
+        Process.sleep(50)
+        {:unlocked} = LockManager.unlock(manager, "resource", lock_id)
+      end
+
+      Process.sleep(200);
+      #lock should be available immediately
+      {:ok, lock_id} = LockManager.lock(manager, "resource")
+      assert lock_id != nil
+    end
+
+    test "Unlocks when lock attempt timed out", %{manager: manager} do
+      {:ok, lock_id} = LockManager.lock(manager, "resource")
+      spawn fn->
+        Process.sleep(100)
+        {:unlocked} = LockManager.unlock(manager, "resource", lock_id)
+      end
+
+      #this one will timeout before previous lock unlocks
+      {:timeout} = LockManager.lock(manager, "resource", 50)
+      Process.sleep(100)
+
+      #lock should be available without timeout now
+      {:ok, lock_id} = LockManager.lock(manager, "resource")
+
       assert lock_id != nil
     end
   end
