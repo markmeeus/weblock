@@ -1,20 +1,18 @@
 # Weblock
 
-**TODO: Add description**
+Work in progress.
+Weblock will be a very naive http-based resource lock manager.
 
-## Installation
+```
+//Lock resource
+POST /resource_to_lock
+{timeout:5,lease:30000}
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed as:
+response:
+{result: 'ok', lockId: 123}
+```
 
-  1. Add weblock to your list of dependencies in `mix.exs`:
-
-        def deps do
-          [{:weblock, "~> 0.0.1"}]
-        end
-
-  2. Ensure weblock is started before your application:
-
-        def application do
-          [applications: [:weblock]]
-        end
-
+```
+//Release lock
+DELETE /resource_to_lock/123
+```
