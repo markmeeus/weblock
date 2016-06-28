@@ -2,11 +2,17 @@ defmodule LockManager do
   use GenServer
 
   def start_link do
-    GenServer.start_link(__MODULE__, :init, [])        
+    GenServer.start_link(__MODULE__, :init, [])
   end
 
-  def lock(manager, name) do
-    GenServer.call(manager, {:lock, name})        
+  def lock(manager, name, timeout \\ 0) do
+    {:ok, lock} = GenServer.call(manager, {:get_lock, name})
+    ResourceLock.enqueue(lock)
+    receive do
+      {:locked, lock_id } ->
+        {:ok, lock_id}
+      after timeout -> {:timeout}
+    end
   end
 
   def unlock(manager, name, lock_id) do
@@ -15,25 +21,26 @@ defmodule LockManager do
 
   #Genserver events
   def init(:init) do
-    {:ok, {0, %{}}}    
-  end
-  
-  def handle_call({:lock, name}, _from, {count, locks}) do        
-    case Map.fetch(locks, name) do
-      {:ok, _id} -> {:reply, :timeout, {count, locks}}      
-      :error ->
-        new_lock_id = count + 1 
-        {
-          :reply, 
-          {:ok, new_lock_id}, 
-          {new_lock_id,  Map.put(locks, name, new_lock_id)}
-        }                
-    end        
+    {:ok, %{} }
   end
 
-  def handle_call({:unlock, name, _lock_id}, _from, {last_id, locks}) do
+  def handle_call({:get_lock, name}, _from, locks) do
+    resource_lock = case Map.fetch(locks, name) do
+      {:ok, lock} -> lock
+        {:reply, {:ok, lock}, locks}
+      :error ->
+        {:ok, lock} = ResourceLock.start_link
+        {:reply, {:ok, lock}, Map.put(locks, name, lock)}
+    end
+  end
+
+
+  def handle_call({:unlock, name, lock_id}, _from, locks) do
     case Map.fetch(locks, name) do
-      {:ok, _} -> {:reply, :unlocked, {last_id, Map.delete(locks, name)}}            
+      {:ok, lock} ->
+        {:reply, ResourceLock.unlock(lock, lock_id), locks}
+      :error ->
+        {:reply, {:unknown_lock_id}, locks}
     end
   end
 end
