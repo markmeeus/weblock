@@ -1,18 +1,15 @@
 # Weblock
 
-Work in progress.
-Weblock will be a very naive http-based resource lock manager.
+Experimental work in progress.
+
 
 ```
-//Lock resource
-POST /resource_to_lock
-{timeout:5,lease:30000}
-
-response:
-{result: 'ok', lockId: 123}
+#Lock a resource
+curl http://localhost:4001/lock/some_resource_key?timeout=5&lease=30000
+#timeout and lease not implemented yet
 ```
 
 ```
-//Release lock
-DELETE /resource_to_lock/123
+#unlock
+curl -X DELETE http://localhost:4001/lock/some_resource_key/{lock_id}
 ```
