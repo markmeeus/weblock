@@ -1,8 +1,8 @@
 defmodule LockManager do
   use GenServer
 
-  def start_link do
-    GenServer.start_link(__MODULE__, :init, [])
+  def start_link state \\ :init, opts \\ []do
+    GenServer.start_link(__MODULE__, state||:init, opts)
   end
 
   def lock(manager, name, timeout \\ 0) do

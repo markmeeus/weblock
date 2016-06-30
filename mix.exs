@@ -14,7 +14,10 @@ defmodule Weblock.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger]]
+    [
+      mod: {Weblock, []},
+      applications: [:logger, :cowboy, :plug]
+    ]
   end
 
   # Dependencies can be Hex packages:
@@ -27,6 +30,11 @@ defmodule Weblock.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{ :uuid, "~> 1.1" }]
+    [
+      {:cowboy, "~> 1.0.0"},
+      {:plug, "~> 1.0"},
+      {:uuid, "~> 1.1"},
+      {:poison, "~> 2.0"}
+    ]
   end
 end
