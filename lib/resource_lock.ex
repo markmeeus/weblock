@@ -7,8 +7,7 @@ defmodule ResourceLock do
   end
 
   def enqueue resource_lock do
-    res = GenServer.call(resource_lock, {:enqueue})
-    res
+    GenServer.call(resource_lock, {:enqueue})
   end
 
   def unlock resource_lock, lock_id do

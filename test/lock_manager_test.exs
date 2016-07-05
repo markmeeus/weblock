@@ -114,4 +114,13 @@ defmodule LockManagerTest do
       assert lock_id != nil
     end
   end
+
+  describe "Lock with leasetime" do
+    test "Automatically unlocks after lease expires", %{manager: manager} do
+      {:ok, _} = LockManager.lock(manager, "resource", 0, 100)
+      Process.sleep(200)
+      {:ok, lock_id} = LockManager.lock(manager, "resource")
+      assert lock_id != nil
+    end
+  end
 end

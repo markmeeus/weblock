@@ -5,10 +5,12 @@ defmodule LockManager do
     GenServer.start_link(__MODULE__, state||:init, opts)
   end
 
-  def lock(manager, name, timeout \\ 0) do
+  def lock(manager, name, timeout \\ 0, lease \\ 0) do
     obtain_lock(manager, name, timeout)
     receive do
-      {:ok, lock_id} -> {:ok, lock_id}
+      {:ok, lock_id} ->
+        if lease > 0, do: set_lease_timeout(manager, name, lock_id, lease)
+        {:ok, lock_id}
       {:timeout} -> {:timeout}
     end
   end
@@ -51,7 +53,13 @@ defmodule LockManager do
         after timeout       -> send parent, {:timeout}
       end
     end
+  end
 
+  defp set_lease_timeout manager, name, lock_id, timeout do
+    spawn fn ->
+      Process.sleep(timeout)
+      LockManager.unlock(manager, name, lock_id)
+    end
   end
 
 end
