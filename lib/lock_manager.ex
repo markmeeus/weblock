@@ -9,7 +9,7 @@ defmodule LockManager do
     obtain_lock(manager, name, timeout)
     receive do
       {:ok, lock_id} ->
-        if lease > 0, do: set_lease_timeout(manager, name, lock_id, lease)
+        if lease && lease > 0, do: set_lease_timeout(manager, name, lock_id, lease)
         {:ok, lock_id}
       {:timeout} -> {:timeout}
     end
@@ -50,7 +50,7 @@ defmodule LockManager do
       ResourceLock.enqueue(lock) #sends locked message immediately if available
       receive do
         {:locked, lock_id } -> send parent, {:ok, lock_id}
-        after timeout       -> send parent, {:timeout}
+        after timeout || 0  -> send parent, {:timeout}
       end
     end
   end

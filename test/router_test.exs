@@ -10,6 +10,21 @@ defmodule RouterTest do
     assert json["lock_id"] != nil
   end
 
+  test "Returns lock_id when lock is released before timeout" do
+    {:ok, _} = LockManager.lock(LockManager, "test_resource5", 0, 50)
+    json = request_and_return_json :get, "/lock/test_resource5?timeout=100"
+    assert json["result"] == "ok"
+    assert json["lock_id"] != nil
+  end
+
+  test "Unlocks recource after lease expires" do
+    json = request_and_return_json :get, "/lock/test_resource6?lease=50"
+    Process.sleep(100)
+    {:ok, _} = LockManager.lock(LockManager, "test_resource6")
+    assert json["result"] == "ok"
+    assert json["lock_id"] != nil
+  end
+
   test "Returns timeout when trying to lock a locked resource" do
     LockManager.lock(LockManager, "test_resource2")
     json = request_and_return_json :get, "/lock/test_resource2"

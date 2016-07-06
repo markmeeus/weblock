@@ -2,16 +2,25 @@ defmodule Router do
 
   use Plug.Router
 
+  import Plug.Conn
+
   plug :match
   plug :dispatch
 
   get "/lock/:resource" do
-    LockManager.lock(LockManager, resource)
+    conn = fetch_query_params(conn)
+
+    [timeout | lease] = [conn.params["timeout"], conn.params["lease"]]
+      |> params_to_int
+
+    LockManager
+      |> LockManager.lock(resource, timeout, lease)
       |> respond_to_lock(conn)
   end
 
   delete "/lock/:resource/:lock_id" do
-    LockManager.unlock(LockManager, resource, lock_id)
+    LockManager
+      |> LockManager.unlock(resource, lock_id)
       |> respond_to_unlock(conn)
   end
 
@@ -47,4 +56,24 @@ defmodule Router do
       |> respond(500, conn)
   end
 
+  def param_to_int param do
+    {param, _} =
+      case param do
+        nil -> {nil, nil}
+        param_as_string -> param_as_string |> Integer.parse
+      end
+    param
+  end
+
+  def params_to_int [] do
+    []
+  end
+
+  def params_to_int [param] do
+    param_to_int(param)
+  end
+
+  def params_to_int [h|t] do
+    [param_to_int(h) | params_to_int(t)]
+  end
 end
